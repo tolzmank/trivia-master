@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BWW Trivia Master</title>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>BWW Trivia Master</h1>
+    <h2>Question, Answer, Wings</h2>
+  </div>
+
+  <!-- Set Game Details Form -->
+  <div class="container">
+    <form action="/setup_game" method="POST">
+      {% if offset_x and offset_y and space_y and keyword_trigger and active_trigger and region %}
+        <table>
+          <tbody>
+            <tr>
+              <td class="no-sort">Keyword Trigger:</td>
+              <td><input class="bubble-input" type="text" id="keyword_trigger" name="keyword_trigger" value="{{keyword_trigger}}" required></td>
+            </tr>
+            <tr>
+              <td class="no-sort">Active Trigger:</td>
+              <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" value="{{active_trigger}}" required></td>
+            </tr>
+            <tr>
+              <td class="no-sort">Screen Region (x,y,w,h):</td>
+              <td>
+                <input class="bubble-input" style="width: 50px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_x" name="screen_region_x" value="{{region[0]}}" required>
+                <input class="bubble-input" style="width: 50px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_y" name="screen_region_y" value="{{region[1]}}" required>
+                <input class="bubble-input" style="width: 50px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_w" name="screen_region_w" value="{{region[2]}}" required>
+                <input class="bubble-input" style="width: 50px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_h" name="screen_region_h" value="{{region[3]}}" required>
+              </td>
+            </tr>
+            <tr>
+              <td class="no-sort">Set Offset X, Y, Space:</td>
+              <td>
+                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_x" name="offset_x" value="{{offset_x}}" required>
+                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_y" name="offset_y" value="{{offset_y}}" required>
+                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="space_y" name="space_y" value="{{space_y}}" required>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="button" type="submit" style="margin-top: 10px;">Set Game</button>
+        <button class="button-gray" type="submit" id="clear-game-info" formmethod="post" formaction="/clear" style="margin-top: 10px;">Clear</button>
+      {% else %}
+        <table>
+          <tbody>
+            <tr>
+              <td class="no-sort">Keyword Trigger:</td>
+              <td><input class="bubble-input" type="text" id="keyword_trigger" name="keyword_trigger" placeholder="Keyword Trigger" title="Word/character that indicates if and where a question is being displayed onscreen" required></td>
+            </tr>
+            <tr>
+              <td class="no-sort">Active Trigger:</td>
+              <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" placeholder="Active Trigger" title="Word/character that indicates game is ready to answer question now" required></td>
+            </tr>
+            <tr>
+              <td class="no-sort">Screen Region (x,y,w,h):</td>
+              <td>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_x" name="screen_region_x" placeholder="X" title="X-axis value for top-left starting anchor point of screen region of game" required>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_y" name="screen_region_y" placeholder="Y" title="Y-axis value for top-left starting anchor point of screen region of game" required>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_w" name="screen_region_w" placeholder="Width" title="Width of game play window from set X anchor point" required>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="screen_region_h" name="screen_region_h" placeholder="Height" title="Height of game play window from set Y anchor point" required>
+              </td>
+            </tr>
+            <tr>
+              <td class="no-sort">Set Offset X, Y, Space:</td>
+              <td>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_x" name="offset_x" placeholder="Set Click X" title="Pixel X-axis offset distance from left side of selected screen region" required>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_y" name="offset_y" placeholder="Set Click Y" title="Pixel Y-axis offset distance from left side of selected screen region" required>
+                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="space_y" name="space_y" placeholder="Spacing Click Y" title="Pixel vertical spacing between answers" required>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="button" type="submit" style="margin-top: 10px;">Set Game</button>
+      {% endif %}
+      </form>
+  </div>
+
+  <!-- Start Trivia Bot Button -->
+  {% if offset_x and offset_y and space_y and keyword_trigger and active_trigger and region %}
+    <div class="container">
+      {% if not trivia_bot %}
+        <form action="/start_trivia_bot" method="POST">
+          <button type="submit" style="display:inline-block;background: none; border: none; padding: 0; margin:0; vertical-align:middle;">
+            <img class="toggle-img" src="{{ url_for('static', filename='icons/toggle_off.svg') }}" alt="Toggle Off" style="height: 70px; margin-right: 0.5em;">
+          </button>
+        </form>
+        <h2 style="margin-bottom: 10px; display: flex; align-items: center;">
+          Trivia Bot Off
+        </h2>
+      
+      {% else %}
+        <form action="/stop_trivia_bot" method="POST">
+          <button type="submit" style="display:inline-block;background: none; border: none; padding: 0; margin:0; vertical-align:middle;">
+            <img class="toggle-img" src="{{ url_for('static', filename='icons/toggle_on.svg') }}" alt="Toggle On" style="height: 70px; margin-right: 0.5em;">
+          </button>
+        </form>
+        <h2 style="margin-bottom: 10px; display: flex; align-items: center;">
+          Trivia Bot On
+        </h2>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</body>
+</html>

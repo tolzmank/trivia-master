@@ -1,0 +1,32 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Screenshots folder
+screenshots/
+
+app_backup.py
+scratch_answer.py
+scratch2.py
+scratch4.py
+url_method_backup.py
+
+sample_site/
+.env
