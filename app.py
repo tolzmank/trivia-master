@@ -1,15 +1,10 @@
-import requests
+
 import os
-os.makedirs('screenshots', exist_ok=True)
 import random
-import re
 
 # Screen scraping/filling
-import pytesseract
 from PIL import Image
 import pyautogui
-import cv2
-import numpy as np
 from PIL import Image
 from PIL import ImageGrab
 import Vision
@@ -20,16 +15,13 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 from difflib import SequenceMatcher
-import requests
-import unicodedata
 
 
-from flask import Flask, render_template, redirect, url_for, request, jsonify
+from flask import Flask, render_template, redirect, url_for, request
 app = Flask(__name__)
 
 import threading
 import time
-import json
 
 region = (112, 240, 299, 354)   # Region coordinates/size (x, y, w, h) of game play window onscreen
 offset_x = 50                   # Pixel X-axis offset distance from left side of selected screen region
@@ -106,7 +98,8 @@ def grab_and_ocr(region):
     img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
     text = vision_ocr(img)
 
-    # Save screenshot for debugging
+    # Save screenshot for configuring/debugging screen region settings
+    #os.makedirs('screenshots', exist_ok=True)
     #timestamp = int(time.time())
     #img.save(f"screenshots/screenshot_{timestamp}.png")
     return text

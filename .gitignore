@@ -30,3 +30,4 @@ url_method_backup.py
 
 sample_site/
 .env
+.gitignore
