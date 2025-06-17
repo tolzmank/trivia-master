@@ -160,8 +160,11 @@ def parse_text_game_content(text):
         if keyword_trigger in lines[i]:
             question_full += ' ' + lines[i]
             break
-        elif excluded_word.lower() not in lines[i].lower():
-            question_full += ' ' + lines[i]
+        elif excluded_word:
+            if excluded_word.lower() not in lines[idx].lower():
+                question_full += ' ' + lines[idx]
+        else:
+            question_full += ' ' + lines[idx]
     print()
     print('QUESTION:', question_full)
 
