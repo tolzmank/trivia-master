@@ -29,6 +29,8 @@ scratch3.py
 scratch4.py
 url_method_backup.py
 trivia_app_BACKUP.py
+trivia_app_scroller_BACKUP.py
+hold_code.py
 
 sample_site/
 .env
