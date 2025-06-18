@@ -8,23 +8,37 @@
 </head>
 <body>
   <div class="container">
-    <h1>BWW Trivia Master</h1>
-    <h2>Question, Answer, Wings</h2>
+    <h1>Trivia Master</h1>
+    <h2>Question, Answer, Select</h2>
   </div>
 
   <!-- Set Game Details Form -->
   <div class="container">
     <form action="/setup_game" method="POST">
-      {% if offset_x and offset_y and space_y and keyword_trigger and active_trigger and region %}
+      {% if keyword_trigger and region %}
         <table>
           <tbody>
             <tr>
-              <td class="no-sort">Keyword Trigger:</td>
+              <td class="no-sort">Question Trigger:</td>
               <td><input class="bubble-input" type="text" id="keyword_trigger" name="keyword_trigger" value="{{keyword_trigger}}" required></td>
             </tr>
             <tr>
-              <td class="no-sort">Active Trigger:</td>
+              <td class="no-sort">Active Trigger Keyword:</td>
+              {% if active_trigger %}
               <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" value="{{active_trigger}}" required></td>
+              {% else %}
+              <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" placeholder="Optional" title="Word/character that indicates game is ready to answer question now, if any."></td>
+              {% endif %}
+            </tr>
+            <tr>
+              <td class="no-sort">Answer Start Keyword:</td>
+              <td>
+                {% if answer_start %}
+                <input class="bubble-input" type="text" id="answer_start" name="answer_start" value="{{answer_start}}" required>
+                {% else %}
+                <input class="bubble-input" type="text" name="answer_start" placeholder="Optional" title="Set the last string before the answers are listed. Only if there is some text between the end of the question and the beginning of the answer list">
+                {% endif %}
+              </td>
             </tr>
             <tr>
               <td class="no-sort">Screen Region (x,y,w,h):</td>
@@ -36,18 +50,27 @@
               </td>
             </tr>
             <tr>
-              <td class="no-sort">Set Offset X, Y, Space:</td>
+              <td>Enable Scrolling</td>
               <td>
-                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_x" name="offset_x" value="{{offset_x}}" required>
-                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_y" name="offset_y" value="{{offset_y}}" required>
-                <input class="bubble-input" style="width: 70px; margin-right: 0px;" type="number" step="1" pattern="\d*" inputmode="numeric" id="space_y" name="space_y" value="{{space_y}}" required>
+                <select id="scroll" name="scroll" class="bubble-input" title="Select Yes if questions onscreen are one page and trivia bot must scroll down as it answers questions">
+                  {% if scroller_version %}
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  {% else %}
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                  {% endif %}
+                </select>
               </td>
             </tr>
           </tbody>
         </table>
         <button class="button" type="submit" style="margin-top: 10px;">Set Game</button>
         <button class="button-gray" type="submit" id="clear-game-info" formmethod="post" formaction="/clear" style="margin-top: 10px;">Clear</button>
-      {% else %}
+      
+      
+      
+        {% else %}
         <table>
           <tbody>
             <tr>
@@ -56,7 +79,11 @@
             </tr>
             <tr>
               <td class="no-sort">Active Trigger:</td>
-              <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" placeholder="Active Trigger" title="Word/character that indicates game is ready to answer question now" required></td>
+              <td><input class="bubble-input" type="text" id="active_trigger" name="active_trigger" placeholder="Optional" title="Word/character that indicates game is ready to answer question now, if any."></td>
+            </tr>
+            <tr>
+              <td class="no-sort">Answer Start Keyword:</td>
+              <td><input class="bubble-input" type="text" name="answer_start" placeholder="Optional" title="Set the last string before the answers are listed. Only if there is some text between the end of the question and the beginning of the answer list"></td>
             </tr>
             <tr>
               <td class="no-sort">Screen Region (x,y,w,h):</td>
@@ -68,11 +95,17 @@
               </td>
             </tr>
             <tr>
-              <td class="no-sort">Set Offset X, Y, Space:</td>
+              <td>Enable Scrolling</td>
               <td>
-                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_x" name="offset_x" placeholder="Set Click X" title="Pixel X-axis offset distance from left side of selected screen region" required>
-                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="offset_y" name="offset_y" placeholder="Set Click Y" title="Pixel Y-axis offset distance from left side of selected screen region" required>
-                <input class="bubble-input" type="number" step="1" pattern="\d*" inputmode="numeric" id="space_y" name="space_y" placeholder="Spacing Click Y" title="Pixel vertical spacing between answers" required>
+                <select id="enable_scroll" name="enable_scroll" class="bubble-input" title="Choose Yes or No">
+                  {% if scroller_version %}
+                  <option value="yes" selected>Yes</option>
+                  <option value="no">No</option>
+                  {% else %}
+                  <option value="no" selected>No</option>
+                  <option value="yes">Yes</option>
+                  {% endif %}
+                </select>
               </td>
             </tr>
           </tbody>
@@ -83,7 +116,7 @@
   </div>
 
   <!-- Start Trivia Bot Button -->
-  {% if offset_x and offset_y and space_y and keyword_trigger and active_trigger and region %}
+  {% if keyword_trigger and region %}
     <div class="container">
       {% if not trivia_bot %}
         <form action="/start_trivia_bot" method="POST">

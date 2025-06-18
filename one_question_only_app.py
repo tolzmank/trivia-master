@@ -34,15 +34,13 @@ active_trigger = ''
 
 keyword_trigger = '?'
 min_words = 2
+scroller_version = False
 
 
 trivia_bot = False
 @app.route('/')
 def index():
     return render_template('index.html',
-                           offset_x=offset_x,
-                           offset_y=offset_y,
-                           space_y=space_y,
                            region=region,
                            keyword_trigger=keyword_trigger,
                            active_trigger=active_trigger,
@@ -59,7 +57,7 @@ def setup_game():
     w = request.form['screen_region_w']
     h = request.form['screen_region_h']
     min_words = request.form['min_words']
-    region = (x, y, w, h)
+    region = request.form['region']
     return redirect(url_for('index'))
         
 
