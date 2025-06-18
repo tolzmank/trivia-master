@@ -34,7 +34,8 @@ active_trigger = ''
 
 keyword_trigger = '?'
 min_words = 2
-last_screen_text = ''
+last_gc_blocks = ""
+targ_y = 0
 
 trivia_bot = False
 @app.route('/')
@@ -127,51 +128,68 @@ def vision_ocr(pil_img: Image.Image) -> str:
         lines.append(candidate.string())
     return "\n".join(lines)
 
-scroll_attempts = 0
-mod_region = region
+
 def poll_and_answer():
     # Poll screen, look for new question, trigger answer bot to get answer, click/select answer
-    global region, scroll_attempts, mod_region
+    global region, targ_y, last_gc_blocks
     while trivia_bot:
-        print('SCROLLS: ', scroll_attempts)
-        if scroll_attempts <= 10:
-            text = grab_and_ocr(region)
-        else:
-            x, y, w, h = mod_region
-            if h <= 10:
-                print('Trivia answers complete')
-                return
-            else:
-                y += 10
-                h -= 10
-                mod_region = (x, y, w, h)
-                print()
-                print('Page scan >>>', h)
-                print()
-                text = grab_and_ocr(mod_region)
-
-        game_content = parse_text_game_content(text)
+        text = grab_and_ocr(region)
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        gc_blocks = parse_text_game_content(lines, [])
 
         # Check if new question
-        if game_content:
-            print()
-            print('QUESTION: ', game_content['question'])
-            answer = get_answer(game_content)
-            select_answer(answer, region, keyword_trigger)
-            #scroll_attempts = 0
-        else:
-            scroll_attempts += 1
+        if gc_blocks:
+            gc_blocks = answer_incomplete_filter(gc_blocks)
+            for game_content in gc_blocks:
+                if not gc_sim(game_content, last_gc_blocks):
+                    print()
+                    print('QUESTION: ', game_content['question'])
+                    print('ANSWERS')
+                    print(game_content['optA'])
+                    print(game_content['optB'])
+                    print(game_content['optC'])
+                    print(game_content['optD'])
+                    print()
 
-        if scroll_attempts <= 10:
+                    answer = get_answer(game_content)
+                    select_answer(answer, region, keyword_trigger)
+            last_gc_blocks = gc_blocks
+
             # Scroll
-            time.sleep(0.25)  
-            pyautogui.scroll(-2)
-            time.sleep(0.25)
+            anchor = region[1]
+            delta_pixels = targ_y - anchor
+            pixels_per_notch = 40
+            clicks = int(delta_pixels / pixels_per_notch)
+            #time.sleep(.25)
+            pyautogui.scroll(-clicks)
+            #time.sleep(.25)
+
+        else:
+            print('No new questions visible')
+
+
+def answer_incomplete_filter(gc_blocks):
+    empty_count = 0
+    for gc in gc_blocks:
+        for k, v in gc.items():
+            if k != 'question':
+                if v == ' ':
+                    empty_count += 1
+        if empty_count > 0:
+            gc_blocks.remove(gc)
+            break
+    return gc_blocks
+
+
+def gc_sim(game_content, last_gc_blocks):
+    # Determine if the question in game content has already been answered before
+    current_question = game_content['question']
+    for gc in last_gc_blocks:
+        sim = SequenceMatcher(None, current_question.lower() if current_question else "", gc['question'].lower()).ratio()
+        if sim > 0.9:
+            return True
+    return False
         
-
-def page_end_parse_text(text):
-    return
-
 
 def clean_gc_answers(game_content, option_labels):
     char_filter_out = ['A ', 'B ', 'C ', 'D ', '®', '©', '•', 'O ']
@@ -188,12 +206,10 @@ def clean_gc_answers(game_content, option_labels):
     return game_content
 
 
-def parse_text_game_content(text):
+def parse_text_game_content(lines, gc_blocks):
     global keyword_trigger, active_trigger, game_content, answer_start, min_words
-    excluded_word = ''
     current_question = game_content.get('question')
     # Parse question/answer options text
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
     #print()
     #print('LINES:')
     #print(lines)
@@ -207,7 +223,6 @@ def parse_text_game_content(text):
     for i in range(len(lines)):
         preq_lines.append(lines[i])
         if keyword_trigger.lower() in lines[i].lower() and lines[i][-1] == '?':
-        #and lines[i][:2] != '? ':
             q_end = i
             break
 
@@ -215,30 +230,24 @@ def parse_text_game_content(text):
     if preq_lines:
         for i in range(len(preq_lines)-1, -1, -1):
             if keyword_trigger in preq_lines[i]:
-                #q_lines.append(lines[i])
                 if preq_lines[i][:2] != '? ':
                     q_lines.append(lines[i])
                 else:
                     q_lines.append(lines[i][2:])
-
             elif re.fullmatch(r"[A-Za-z0-9 ,''.|]+", preq_lines[i]) and len(preq_lines[i].split()) >= min_words:
                 q_lines.append(preq_lines[i])
             else:
                 break
         q_lines = q_lines[::-1]
 
-        # Build full question
         if q_lines:
             for line in q_lines:
                 line = re.sub(r'\|', 'I', line)
                 question_full += ' ' + line
     
     if keyword_trigger not in question_full:
-        return
-
-    # Check if new question (compensate for slight variations in screen grab to text conversions)
-    sim = SequenceMatcher(None, current_question.lower() if current_question else "", question_full.lower()).ratio()
-    #print('SIM:', sim)
+        #print('No new questions visible')
+        return gc_blocks
 
     # Check if question on screen ready to answer
     for i in range(len(lines)):
@@ -248,37 +257,33 @@ def parse_text_game_content(text):
             option_lines = lines[i + 1:]
         if not active_trigger or active_trigger.lower() in lines[i].lower():
             if not answer_start or answer_start.lower() in lines[i].lower():
-                if not game_content or sim < 0.9:
-                    # Build game content structure (ensure only 4 non-None answer options)
-                    option_labels = ['optA', 'optB', 'optC', 'optD']
+                #if not gc_blocks:
+                # Build game content structure (ensure only 4 non-None answer options)
+                option_labels = ['optA', 'optB', 'optC', 'optD']
 
-                    # Filter out letter option labels
-                    for option in option_lines:
-                        if option.upper() in ['A', 'B', 'C', 'D']:
-                            option_lines.remove(option)
+                # Filter out letter option labels
+                for option in option_lines:
+                    if option.upper() in ['A', 'B', 'C', 'D']:
+                        option_lines.remove(option)
 
-                    game_content['question'] = question_full
-                    game_content['optA'] = ' '
-                    game_content['optB'] = ' '
-                    game_content['optC'] = ' '
-                    game_content['optD'] = ' '
+                # Create a new game_content block for question
+                gc = {
+                    'question': question_full,
+                    'optA': ' ',
+                    'optB': ' ',
+                    'optC': ' ',
+                    'optD': ' '
+                }
 
-                    for idx in range(len(min(option_lines, option_labels, key=len))):
-                        game_content[option_labels[idx]] = option_lines[idx]
-                    clean_gc_answers(game_content, option_labels)
-                    print()
-                    print('ANSWERS:')
-                    print(game_content['optA'])
-                    print(game_content['optB'])
-                    print(game_content['optC'])
-                    print(game_content['optD'])
-                    print()
-                    print('GAME CONTENT:', game_content)
-                    print()
-                    
-                    opts = [game_content['optA'], game_content['optB'],
-                            game_content['optC'], game_content['optD']]
-                    return game_content
+                for idx in range(len(min(option_lines, option_labels, key=len))):
+                    gc[option_labels[idx]] = option_lines[idx]
+                clean_gc_answers(gc, option_labels)
+                gc_blocks.append(gc)
+                break
+    rem_lines = lines[q_end+1:]
+    if rem_lines:
+        return parse_text_game_content(rem_lines, gc_blocks)
+    return gc_blocks
 
 
 def get_answer(game_content):
@@ -328,6 +333,7 @@ def get_answer(game_content):
 
 
 def select_answer(answer, region, keyword_trigger):
+    global targ_y
     # Locate answer string onscreen
     target_box = None
     rx, ry, rw, rh = region
@@ -358,6 +364,7 @@ def select_answer(answer, region, keyword_trigger):
     # Calc click coordinates
     click_x = rx + x + w//2
     click_y = ry + y + h//2
+    targ_y = click_y
 
     print(f"Clicking at ({click_x}, {click_y}) for answer '{answer}'")
 
@@ -422,4 +429,4 @@ if __name__ == "__main__":
 
     # Uncomment to run headless
     start_bww_trivia_bot()
-    app.run(debug=True)
+    app.run(debug=False)
